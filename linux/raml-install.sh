@@ -4,7 +4,7 @@ RAML_HOME=${RAML_HOME:-/opt/raml-jstorage}
 #
 URL_TOMCAT_DEPLOY="https://gist.github.com/ggrandes/7505277/raw/tomcat-deploy.sh"
 URL_API_DESIGNER="https://github.com/ggrandes-clones/api-designer/archive/master.zip"
-URL_JSTORAGE="https://maven-release.s3.amazonaws.com/release/org/javastack/raml-jstorage/1.0.0/raml-jstorage-1.0.0.war"
+URL_JSTORAGE="https://maven-release.s3.amazonaws.com/release/org/javastack/raml-jstorage/1.0.1/raml-jstorage-1.0.1.war"
 #
 die () {
   echo "FAILED" "$1"
@@ -44,13 +44,13 @@ wget -O api-designer/master.zip $URL_API_DESIGNER
 unzip -o api-designer/master.zip -d /tmp/
 mv /tmp/api-designer-master/dist/* ${RAML_HOME}/tomcat/webapps/api-designer/
 cp -a ${RAML_HOME}/tomcat/webapps/api-designer/index.html ${RAML_HOME}/tomcat/webapps/api-designer/local-storage.html
-cp -a ${RAML_HOME}/tomcat/webapps/raml-jstorage/index.html ${RAML_HOME}/tomcat/webapps/api-designer/index.html
 ###
 ### Install RAML-JStorage
 ###
 grep -q "raml.jstorage.directory" ${RAML_HOME}/tomcat/bin/setenv.sh 1>/dev/null 2>&1 ||
   echo "CATALINA_OPTS=\"-Dprogram.name=RAML-JSTORAGE -Draml.jstorage.directory=${RAML_HOME}/storage/ \${CATALINA_OPTS}\"" >> ${RAML_HOME}/tomcat/bin/setenv.sh
 wget -O ${RAML_HOME}/tomcat/webapps/raml-jstorage.war $URL_JSTORAGE
+unzip ${RAML_HOME}/tomcat/webapps/raml-jstorage.war index.html -d ${RAML_HOME}/tomcat/webapps/api-designer/ 
 #
 echo "INSTALL FINISHED"
 echo "RAML_HOME=${RAML_HOME}"

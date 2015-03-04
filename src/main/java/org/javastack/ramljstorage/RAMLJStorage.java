@@ -114,8 +114,15 @@ public class RAMLJStorage extends HttpServlet {
 			}
 			is = openInput(key);
 			os = response.getOutputStream();
-			response.setContentType("application/raml+yaml");
+			String mimeType = request.getServletContext().getMimeType(key);
+			if (mimeType == null) {
+				mimeType = getMimeType(key);
+			}
+			if (mimeType != null) {
+				response.setContentType(mimeType);
+			}
 			response.setContentLength((int) f.length());
+			setLightCache(response);
 			copyStream(is, os);
 		} catch (FileNotFoundException e) {
 			final PrintWriter out = response.getWriter();
@@ -154,8 +161,12 @@ public class RAMLJStorage extends HttpServlet {
 			is = request.getInputStream();
 			os = openOutput(key);
 			copyStream(is, os);
+			final String json = "{\"status\":\"success\",\"message\":\"The file was successfully updated.\"}\r\n";
 			response.setContentType("application/json");
-			out.println("{\"status\":\"success\",\"message\":\"The file was successfully updated.\"}");
+			response.setContentLength(json.length());
+			setNoCache(response);
+			out.print(json);
+			out.flush();
 		} catch (Exception e) {
 			log("Invalid request: " + e.toString(), e);
 			sendError(response, out, HttpServletResponse.SC_BAD_REQUEST, "Bad request");
@@ -163,7 +174,6 @@ public class RAMLJStorage extends HttpServlet {
 		} finally {
 			closeQuietly(os);
 			closeQuietly(is);
-			out.flush();
 		}
 	}
 
@@ -185,10 +195,7 @@ public class RAMLJStorage extends HttpServlet {
 			sendError(response, out, HttpServletResponse.SC_BAD_REQUEST, "Bad request");
 			return;
 		}
-		response.setContentType("application/json");
-		response.setContentLength(2);
-		out.print("{}");
-		out.flush();
+		sendResponseEmpty(response, out);
 	}
 
 	@Override
@@ -203,11 +210,12 @@ public class RAMLJStorage extends HttpServlet {
 
 		try {
 			if (p_operation.equals("/test")) {
-				final String res = "{\"status\":\"ok\"}\n";
+				final String json = "{\"status\":\"ok\"}\r\n";
 				final PrintWriter out = response.getWriter();
 				response.setContentType("application/json");
-				response.setContentLength(res.length());
-				out.print(res);
+				response.setContentLength(json.length());
+				setNoCache(response);
+				out.print(json);
 				out.flush();
 				return;
 			} else if (p_operation.equals("/list")) {
@@ -237,10 +245,7 @@ public class RAMLJStorage extends HttpServlet {
 			return;
 		}
 		final PrintWriter out = response.getWriter();
-		response.setContentType("application/json");
-		response.setContentLength(2);
-		out.print("{}");
-		out.flush();
+		sendResponseEmpty(response, out);
 	}
 
 	private final File fileForKey(final String key) throws IOException {
@@ -271,6 +276,7 @@ public class RAMLJStorage extends HttpServlet {
 		final OutputStream os = response.getOutputStream();
 		response.setContentType("application/json");
 		response.setContentLength(b.length);
+		setNoCache(response);
 		os.write(b);
 		os.flush();
 	}
@@ -286,6 +292,10 @@ public class RAMLJStorage extends HttpServlet {
 	private static final StringBuilder listFiles(final StringBuilder sb, final File file, final int rootLength) {
 		final String path = mapPath(file.getPath().substring(rootLength));
 		final String name = (path.length() == 1 ? "" : file.getName());
+		if (!name.isEmpty() && (name.charAt(0) == '.')) {
+			// Skip names begin with dot
+			return sb;
+		}
 		sb.append("{");
 		sb.append("\"path\":\"").append(path).append("\",");
 		sb.append("\"name\":\"").append(name).append("\",");
@@ -344,11 +354,34 @@ public class RAMLJStorage extends HttpServlet {
 		os.flush();
 	}
 
+	private static final void setNoCache(final HttpServletResponse response) {
+		response.setHeader("Cache-Control", "private, no-cache, no-store");
+		response.setHeader("Pragma", "no-cache");
+	}
+
+	private static final void setLightCache(final HttpServletResponse response) {
+		response.setHeader("Cache-Control", "must-revalidate, max-age=1");
+		response.setHeader("Pragma", "no-cache");
+	}
+
+	private static final void sendResponseEmpty(final HttpServletResponse response, final PrintWriter out) {
+		final String json = "{}\r\n";
+		response.setContentType("application/json");
+		response.setContentLength(json.length());
+		setNoCache(response);
+		out.print(json);
+		out.flush();
+	}
+
 	private static final void sendError(final HttpServletResponse response, final PrintWriter out,
 			final int status, final String msg) {
+		final String json = "{\"status\":\"error\",\"error\":\"" + msg + "\"}\r\n";
 		response.setContentType("application/json");
+		response.setContentLength(json.length());
 		response.setStatus(status);
-		out.println("{\"status\":\"error\",\"error\":\"" + msg + "\"}");
+		setNoCache(response);
+		out.print(json);
+		out.flush();
 	}
 
 	private static final String getPathInfoKey(final String pathInfo) {
@@ -373,14 +406,30 @@ public class RAMLJStorage extends HttpServlet {
 			if ((c >= '0') && (c <= '9'))
 				continue;
 			switch (c) {
+				case '/': // Sub directories
+					if (in.charAt(Math.min(i + 1, len - 1)) == '.') {
+						// Dont allow files begin with dot
+						return false;
+					}
 				case '.':
 				case '_':
 				case '-':
-				case '/': // Sub directories
 					continue;
 			}
 			return false;
 		}
 		return true;
+	}
+
+	private static final String getMimeType(final String name) {
+		if (name.endsWith(".raml"))
+			return "application/raml+yaml";
+		if (name.endsWith(".yaml") || name.endsWith(".yml"))
+			return "text/yaml";
+		if (name.endsWith(".json"))
+			return "application/json";
+		if (name.endsWith(".md"))
+			return "text/markdown";
+		return null;
 	}
 }

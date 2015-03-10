@@ -2,7 +2,7 @@
 
 RAML-JStorage is a storage backend for [RAML API Designer](https://github.com/ggrandes-clones/api-designer/), built on Java to run in any Tomcat (rather than use the APIHub cloud service) with no more dependencies and still be able to collaborate designs. Project is Open source (Apache License, Version 2.0).
 
-### Current Stable Version is [1.0.1](https://maven-release.s3.amazonaws.com/release/org/javastack/raml-jstorage/1.0.1/raml-jstorage-1.0.1.war)
+### Current Stable Version is [1.0.2](https://maven-release.s3.amazonaws.com/release/org/javastack/raml-jstorage/1.0.2/raml-jstorage-1.0.2.war)
 
 ---
 

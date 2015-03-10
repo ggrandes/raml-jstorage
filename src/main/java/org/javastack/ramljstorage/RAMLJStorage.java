@@ -266,6 +266,10 @@ public class RAMLJStorage extends HttpServlet {
 
 	private final OutputStream openOutput(final String key) throws IOException {
 		final File f = fileForKey(key);
+		final File fp = f.getParentFile();
+		if (!fp.exists()) {
+			fp.mkdirs();
+		}
 		return new FileOutputStream(f);
 	}
 

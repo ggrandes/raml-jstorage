@@ -268,7 +268,8 @@ public class RAMLJStorage extends HttpServlet {
 		final File f = fileForKey(key);
 		final File fp = f.getParentFile();
 		if (!fp.exists()) {
-			fp.mkdirs();
+			final boolean isOK = fp.mkdirs();
+			log("Creating directories (PUT): " + fp.getPath() + " ok=" + isOK);
 		}
 		return new FileOutputStream(f);
 	}
